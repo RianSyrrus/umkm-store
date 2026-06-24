@@ -8,9 +8,12 @@ use App\Services\Cart\CartService;
 use App\Services\Maps\DeliveryFeeCalculator;
 use App\Services\Maps\MapProvider;
 use App\ValueObjects\Coordinates;
+use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
+#[Layout('layouts.storefront')]
 #[Title('Checkout')]
 class CheckoutPage extends Component
 {
@@ -169,7 +172,7 @@ class CheckoutPage extends Component
         (new CartService)->clear();
     }
 
-    public function render(): \Illuminate\Contracts\View\View
+    public function render(): View
     {
         $cartService = new CartService;
         $cartItems = $cartService->get();
