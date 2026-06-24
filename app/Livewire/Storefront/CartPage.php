@@ -50,7 +50,7 @@ class CartPage extends Component
         $this->dispatch('toast', message: 'Item berhasil dihapus dari keranjang.', variant: 'success');
     }
 
-    public function render()
+    public function render(): \Illuminate\Contracts\View\View
     {
         $cartService = new CartService;
         $items = $cartService->get();

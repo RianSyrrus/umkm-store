@@ -38,6 +38,9 @@ class CheckoutPage extends Component
 
     public int $total = 0;
 
+    /**
+     * @return array<string, array<int, string>>
+     */
     public function rules(): array
     {
         $rules = [
@@ -57,6 +60,7 @@ class CheckoutPage extends Component
         return $rules;
     }
 
+    /** @var array<string, string> */
     protected array $validationAttributes = [
         'customerName' => 'Nama Penerima',
         'customerWhatsapp' => 'Nomor WhatsApp',
@@ -75,10 +79,8 @@ class CheckoutPage extends Component
         $this->total = $this->subtotal;
 
         $store = Store::current();
-        if ($store) {
-            $this->latitude = (float) $store->latitude;
-            $this->longitude = (float) $store->longitude;
-        }
+        $this->latitude = (float) $store->latitude;
+        $this->longitude = (float) $store->longitude;
     }
 
     public function setCoordinates(float $latitude, float $longitude): void
@@ -167,7 +169,7 @@ class CheckoutPage extends Component
         (new CartService)->clear();
     }
 
-    public function render()
+    public function render(): \Illuminate\Contracts\View\View
     {
         $cartService = new CartService;
         $cartItems = $cartService->get();

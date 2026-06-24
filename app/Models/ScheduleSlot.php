@@ -34,6 +34,8 @@ class ScheduleSlot extends Model
 
     /**
      * Accessor to get formatted time range, e.g. "09:00 - 12:00"
+     *
+     * @return \Illuminate\Database\Eloquent\Casts\Attribute<non-falsy-string, never>
      */
     protected function timeRange(): Attribute
     {

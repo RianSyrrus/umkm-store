@@ -29,6 +29,9 @@ class ScheduleSlotIndex extends Component
 
     public string $search = '';
 
+    /**
+     * @return array<string, array<int, string>>
+     */
     protected function rules(): array
     {
         return [
@@ -41,6 +44,7 @@ class ScheduleSlotIndex extends Component
         ];
     }
 
+    /** @var array<string, string> */
     protected array $validationAttributes = [
         'date' => 'Tanggal',
         'startTime' => 'Waktu Mulai',
@@ -120,7 +124,7 @@ class ScheduleSlotIndex extends Component
         $this->resetErrorBag();
     }
 
-    public function render()
+    public function render(): \Illuminate\Contracts\View\View
     {
         $scheduleSlots = ScheduleSlot::query()
             ->when($this->search, function ($q) {

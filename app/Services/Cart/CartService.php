@@ -18,6 +18,8 @@ class CartService
 
     /**
      * Get all items in the cart.
+     *
+     * @return Collection<string, array{id: string, product: Product, variant: ProductVariant, options: Collection<int, \App\Models\OptionValue>, addons: Collection<int, \App\Models\Addon>, quantity: int, notes: string, unit_price: int, total_price: int}>
      */
     public function get(): Collection
     {
@@ -25,6 +27,7 @@ class CartService
         $items = new Collection;
 
         foreach ($cart as $id => $item) {
+            /** @var Product|null $product */
             $product = Product::with(['category', 'variants', 'images', 'optionGroups.values', 'addons'])
                 ->find($item['product_id']);
 
@@ -70,6 +73,7 @@ class CartService
     /**
      * Add an item to the cart.
      *
+     * @param array{variant_id?: ?int, options?: array<int, int|array<int, int>>, addons?: array<int, int>, quantity?: int, notes?: string} $config
      * @throws \InvalidArgumentException
      */
     public function add(Product $product, array $config): void
@@ -136,7 +140,9 @@ class CartService
         }
 
         $item = $cart[$cartItemId];
+        /** @var Product $product */
         $product = Product::findOrFail($item['product_id']);
+        /** @var ProductVariant $variant */
         $variant = ProductVariant::findOrFail($item['variant_id']);
 
         // Check stock
@@ -180,6 +186,9 @@ class CartService
 
     /**
      * Generate unique hash for cart item based on its configuration.
+     *
+     * @param array<int, int|array<int, int>> $options
+     * @param array<int, int> $addons
      */
     protected function generateItemId(int $productId, int $variantId, array $options, array $addons): string
     {
