@@ -2,6 +2,11 @@
 
 namespace App\Providers;
 
+use App\Services\Maps\DeliveryFeeCalculator;
+use App\Services\Maps\FakeMapProvider;
+use App\Services\Maps\GoogleMapsProvider;
+use App\Services\Maps\MapProvider;
+use App\Services\Maps\StandardDeliveryFeeCalculator;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +20,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(DeliveryFeeCalculator::class, StandardDeliveryFeeCalculator::class);
+
+        $this->app->singleton(MapProvider::class, function ($app) {
+            $key = config('services.google_maps.key');
+
+            if (filled($key)) {
+                return new GoogleMapsProvider($key);
+            }
+
+            return new FakeMapProvider;
+        });
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Livewire\Storefront;
 
 use App\Models\Product;
+use App\Services\Cart\CartService;
 use App\Services\Catalog\ProductConfigurationValidator;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -116,6 +117,7 @@ class ProductDetailPage extends Component
     public function submitConfiguration(): void
     {
         $validator = new ProductConfigurationValidator;
+        $cartService = new CartService;
 
         try {
             $validated = $validator->validate($this->product, [
@@ -125,7 +127,17 @@ class ProductDetailPage extends Component
                 'quantity' => $this->quantity,
             ]);
 
-            $this->dispatch('toast', message: 'Item berhasil ditambahkan ke keranjang (Demo). Total: Rp'.number_format($validated->totalPrice, 0, ',', '.'), variant: 'success');
+            $cartService->add($this->product, [
+                'variant_id' => $this->variantId,
+                'options' => $this->selectedOptions,
+                'addons' => $this->selectedAddons,
+                'quantity' => $this->quantity,
+                'notes' => '', // Notes could be added if input exists, default empty for now
+            ]);
+
+            $this->dispatch('toast', message: 'Produk berhasil ditambahkan ke keranjang.', variant: 'success');
+
+            $this->redirect(route('home.cart'), navigate: true);
         } catch (\InvalidArgumentException $e) {
             $this->dispatch('toast', message: $e->getMessage(), variant: 'error');
         }

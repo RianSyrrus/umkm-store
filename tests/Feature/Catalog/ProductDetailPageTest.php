@@ -87,5 +87,6 @@ test('submitting valid configuration shows success toast', function () {
         ->set('variantId', $variant->id)
         ->set('selectedOptions.'.$group->id.'.0', $value->id)
         ->call('submitConfiguration')
-        ->assertDispatched('toast', message: 'Item berhasil ditambahkan ke keranjang (Demo). Total: Rp11.000', variant: 'success');
+        ->assertDispatched('toast', message: 'Produk berhasil ditambahkan ke keranjang.', variant: 'success')
+        ->assertRedirect(route('home.cart'));
 });
