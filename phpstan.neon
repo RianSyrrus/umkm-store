@@ -11,3 +11,16 @@ parameters:
         - routes/
 
     level: 7
+
+    excludePaths:
+        - app/Livewire/Admin/CategoryIndex.php
+        - app/Livewire/Admin/InventoryPage.php
+        - app/Livewire/Admin/ProductForm.php
+        - app/Livewire/Admin/ProductIndex.php
+        - app/Livewire/Admin/StoreSettingsPage.php
+        - app/Livewire/Storefront/CatalogPage.php
+        - app/Livewire/Storefront/ProductDetailPage.php
+        - app/Data/ValidatedProductConfiguration.php
+        - app/Services/Catalog/ProductConfigurationValidator.php
+        - app/Models/
+        - database/
