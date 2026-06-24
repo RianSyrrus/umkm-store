@@ -1,8 +1,10 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Livewire\Storefront\CatalogPage;
+use App\Livewire\Storefront\ProductDetailPage;
 
-Route::view('/', 'storefront.home')->name('home');
+Route::get('/', CatalogPage::class)->name('home');
+Route::get('/products/{product:slug}', ProductDetailPage::class)->name('products.show');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');

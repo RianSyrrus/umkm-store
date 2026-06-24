@@ -25,5 +25,7 @@ class DatabaseSeeder extends Seeder
                 'password' => Hash::make(env('ADMIN_PASSWORD', 'change-me-now')),
             ]
         );
+
+        $this->call(DemoCatalogSeeder::class);
     }
 }
