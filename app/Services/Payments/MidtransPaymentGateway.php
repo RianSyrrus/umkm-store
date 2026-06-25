@@ -40,6 +40,29 @@ class MidtransPaymentGateway implements PaymentGateway
         $attempt = now()->timestamp;
         $gatewayOrderId = "{$order->order_code}-{$attempt}";
 
+        // Bypass real API calls if server key is dummy/mock or not set (for local development testing)
+        if (empty($this->serverKey) || str_starts_with($this->serverKey, 'SB-Mid-server-mock')) {
+            $token = 'mock-snap-token-'.Str::random(10);
+            $redirectUrl = 'https://app.sandbox.midtrans.com/snap/v1/pay?token='.$token;
+
+            Payment::updateOrCreate(
+                ['order_id' => $order->id],
+                [
+                    'gateway' => 'midtrans',
+                    'gateway_order_id' => $gatewayOrderId,
+                    'snap_token' => $token,
+                    'redirect_url' => $redirectUrl,
+                    'status' => PaymentStatus::Pending,
+                    'gross_amount' => $order->grand_total,
+                ]
+            );
+
+            return [
+                'snap_token' => $token,
+                'redirect_url' => $redirectUrl,
+            ];
+        }
+
         // Calculate payment expiry duration in minutes
         $expiryMinutes = max(5, (int) now()->diffInMinutes($order->payment_expires_at));
 
