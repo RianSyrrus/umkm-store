@@ -259,6 +259,14 @@
                     </div>
                 </div>
 
+                @error('customerName')
+                    @if(str_contains($message, 'out of stock') || str_contains($message, 'kosong') || str_contains($message, 'kesalahan'))
+                        <div class="p-3 bg-red-55 dark:bg-red-950/20 text-red-650 dark:text-red-400 rounded-2xl text-xs font-bold">
+                            {{ $message }}
+                        </div>
+                    @endif
+                @enderror
+
                 <!-- CTA Submit Button -->
                 <flux:button 
                     wire:click="submit" 

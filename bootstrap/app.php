@@ -23,6 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
             guests: '/admin/login',
             users: '/admin'
         );
+
+        $middleware->validateCsrfTokens(except: [
+            'api/webhooks/midtrans',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

@@ -1,14 +1,19 @@
 <?php
 
+use App\Http\Controllers\Api\MidtransWebhookController;
 use App\Livewire\Storefront\CartPage;
 use App\Livewire\Storefront\CatalogPage;
 use App\Livewire\Storefront\CheckoutPage;
+use App\Livewire\Storefront\OrderTrackingPage;
 use App\Livewire\Storefront\ProductDetailPage;
 
 Route::get('/', CatalogPage::class)->name('home');
 Route::get('/products/{product:slug}', ProductDetailPage::class)->name('products.show');
 Route::get('/cart', CartPage::class)->name('home.cart');
 Route::get('/checkout', CheckoutPage::class)->name('home.checkout');
+Route::get('/orders/track', OrderTrackingPage::class)->name('orders.track');
+
+Route::post('/api/webhooks/midtrans', MidtransWebhookController::class)->name('webhooks.midtrans');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');

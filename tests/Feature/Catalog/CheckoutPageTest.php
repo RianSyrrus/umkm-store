@@ -7,9 +7,18 @@ use App\Models\ProductVariant;
 use App\Models\ScheduleSlot;
 use App\Models\Store;
 use App\Services\Cart\CartService;
+use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 
 beforeEach(function () {
+    // Fake Midtrans Snap API
+    Http::fake([
+        'https://app.sandbox.midtrans.com/snap/v1/transactions' => Http::response([
+            'token' => 'mock-snap-token-123',
+            'redirect_url' => 'https://app.sandbox.midtrans.com/snap/v1/pay?token=mock-snap-token-123',
+        ], 201),
+    ]);
+
     // Ensure we have a store record
     $this->store = Store::factory()->create([
         'latitude' => -6.9174639, // Bandung
@@ -66,7 +75,15 @@ test('pickup checkout succeeds with valid data', function () {
         ->set('scheduleSlotId', $this->slot->id)
         ->call('submit')
         ->assertHasNoErrors()
-        ->assertDispatched('toast', message: 'Checkout berhasil disimulasikan.', variant: 'success');
+        ->assertRedirect()
+        ->assertDispatched('toast', message: 'Pesanan berhasil dibuat. Silakan lakukan pembayaran.', variant: 'success');
+
+    // Assert database state
+    $this->assertDatabaseHas('orders', [
+        'customer_name' => 'Rian',
+        'whatsapp_normalized' => '628123456789',
+        'fulfillment_type' => 'pickup',
+    ]);
 });
 
 test('delivery checkout calculates fee and succeeds within 10km limit', function () {
@@ -81,7 +98,8 @@ test('delivery checkout calculates fee and succeeds within 10km limit', function
         ->assertHasNoErrors('distance')
         ->assertSet('deliveryFee', 9000) // ceil(approx 1.58 km) = 2 km * 2000 + 5000 = 9000
         ->call('submit')
-        ->assertHasNoErrors();
+        ->assertHasNoErrors()
+        ->assertRedirect();
 });
 
 test('delivery checkout fails when distance exceeds 10km limit', function () {

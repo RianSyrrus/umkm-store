@@ -2,13 +2,28 @@
 
 namespace App\Livewire\Storefront;
 
+use App\Enums\FulfillmentType;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
+use App\Exceptions\OutOfStockException;
+use App\Exceptions\ScheduleSlotFullException;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\OrderStatusHistory;
 use App\Models\ScheduleSlot;
 use App\Models\Store;
 use App\Services\Cart\CartService;
+use App\Services\Inventory\InventoryReservationService;
 use App\Services\Maps\DeliveryFeeCalculator;
 use App\Services\Maps\MapProvider;
+use App\Services\Payments\PaymentGateway;
 use App\ValueObjects\Coordinates;
+use App\ValueObjects\NormalizedPhone;
+use App\ValueObjects\OrderCode;
+use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -145,31 +160,167 @@ class CheckoutPage extends Component
         $this->total = $this->subtotal + $this->deliveryFee;
     }
 
-    public function submit(): void
-    {
+    public function submit(
+        InventoryReservationService $reservationService,
+        PaymentGateway $paymentGateway
+    ): mixed {
         $this->validate();
+
+        $cartService = new CartService;
+        $cartItems = $cartService->get();
+
+        if ($cartItems->isEmpty()) {
+            $this->addError('customerName', 'Keranjang belanja Anda kosong.');
+
+            return null;
+        }
 
         if ($this->fulfillmentMethod === 'delivery') {
             $this->calculateDeliveryFee();
             if ($this->distanceMeters > Store::current()->max_delivery_distance_meters) {
                 $this->addError('distance', 'Jarak pengiriman melebihi radius maksimal 10 km.');
 
-                return;
+                return null;
             }
         }
 
-        $slot = ScheduleSlot::find($this->scheduleSlotId);
-        if (! $slot || ! $slot->isAvailable()) {
-            $this->addError('scheduleSlotId', 'Slot waktu yang dipilih sudah penuh atau melewati batas waktu pemesanan.');
+        // Normalize WhatsApp phone number
+        try {
+            $normalizedPhone = NormalizedPhone::from($this->customerWhatsapp);
+        } catch (\InvalidArgumentException $e) {
+            $this->addError('customerWhatsapp', $e->getMessage());
 
-            return;
+            return null;
         }
 
-        // Simulate successful checkout
-        $this->dispatch('toast', message: 'Checkout berhasil disimulasikan.', variant: 'success');
+        $slot = ScheduleSlot::find($this->scheduleSlotId);
+        if (! $slot) {
+            $this->addError('scheduleSlotId', 'Slot waktu tidak valid.');
 
-        // Clear cart
-        (new CartService)->clear();
+            return null;
+        }
+
+        try {
+            $order = DB::transaction(function () use ($cartItems, $slot, $normalizedPhone, $reservationService) {
+                // 1. Create order
+                $orderCode = OrderCode::generate();
+                $scheduledAt = Carbon::parse($slot->date->format('Y-m-d').' '.$slot->start_time);
+
+                /** @var Order $order */
+                $order = Order::create([
+                    'order_code' => (string) $orderCode,
+                    'customer_name' => $this->customerName,
+                    'whatsapp_normalized' => (string) $normalizedPhone,
+                    'whatsapp_display' => $this->customerWhatsapp,
+                    'payment_status' => PaymentStatus::Pending,
+                    'order_status' => OrderStatus::AwaitingPayment,
+                    'fulfillment_type' => FulfillmentType::from($this->fulfillmentMethod),
+                    'schedule_slot_id' => $slot->id,
+                    'scheduled_at' => $scheduledAt,
+                    'subtotal' => $this->subtotal,
+                    'delivery_fee' => $this->deliveryFee,
+                    'grand_total' => $this->total,
+                    'customer_note' => $this->notes,
+                    'payment_expires_at' => now()->addMinutes(30),
+                ]);
+
+                // 2. Create order items & options/addons
+                foreach ($cartItems as $cartItem) {
+                    /** @var OrderItem $orderItem */
+                    $orderItem = $order->items()->create([
+                        'product_id' => $cartItem['product']->id,
+                        'product_variant_id' => $cartItem['variant']->id,
+                        'product_name' => $cartItem['product']->name,
+                        'variant_name' => $cartItem['variant']->name,
+                        'sku' => $cartItem['variant']->sku ?? null,
+                        'unit_price' => $cartItem['unit_price'],
+                        'quantity' => $cartItem['quantity'],
+                        'line_total' => $cartItem['total_price'],
+                    ]);
+
+                    // Save options
+                    if (! empty($cartItem['options'])) {
+                        foreach ($cartItem['options'] as $optionValue) {
+                            $orderItem->options()->create([
+                                'group_name' => $optionValue->optionGroup ? $optionValue->optionGroup->name : 'Pilihan',
+                                'value_name' => $optionValue->name,
+                                'price_delta' => $optionValue->price_delta,
+                            ]);
+                        }
+                    }
+
+                    // Save addons
+                    if (! empty($cartItem['addons'])) {
+                        foreach ($cartItem['addons'] as $addon) {
+                            $orderItem->addons()->create([
+                                'addon_name' => $addon->name,
+                                'unit_price' => $addon->price,
+                                'quantity' => $cartItem['quantity'],
+                                'subtotal' => $addon->price * $cartItem['quantity'],
+                            ]);
+                        }
+                    }
+                }
+
+                // 3. Create delivery record if delivery
+                if ($this->fulfillmentMethod === 'delivery') {
+                    $order->delivery()->create([
+                        'recipient_name' => $this->customerName,
+                        'recipient_phone' => (string) $normalizedPhone,
+                        'address' => $this->deliveryAddress,
+                        'latitude' => $this->latitude,
+                        'longitude' => $this->longitude,
+                        'distance_meters' => $this->distanceMeters,
+                        'delivery_fee' => $this->deliveryFee,
+                        'provider' => 'fake',
+                    ]);
+                }
+
+                // 4. Create initial history record
+                OrderStatusHistory::create([
+                    'order_id' => $order->id,
+                    'from_status' => null,
+                    'to_status' => OrderStatus::AwaitingPayment,
+                    'actor_type' => 'customer',
+                    'reason' => 'Pemesanan baru dibuat oleh pelanggan.',
+                ]);
+
+                // 5. Reserve stock & slot
+                $reservationService->reserve($order, 30);
+
+                return $order;
+            });
+
+            // 6. Create Midtrans Snap transaction
+            $paymentGateway->createTransaction($order);
+
+            // 7. Clear cart
+            $cartService->clear();
+
+            $this->dispatch('toast', message: 'Pesanan berhasil dibuat. Silakan lakukan pembayaran.', variant: 'success');
+
+            // Redirect to tracking page
+            return $this->redirect(
+                route('orders.track', [
+                    'code' => $order->order_code,
+                    'phone' => (string) $normalizedPhone,
+                ]),
+                navigate: true
+            );
+
+        } catch (OutOfStockException $e) {
+            $this->addError('customerName', $e->getMessage());
+        } catch (ScheduleSlotFullException $e) {
+            $this->addError('scheduleSlotId', $e->getMessage());
+        } catch (\Exception $e) {
+            Log::error('Checkout execution failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            $this->addError('customerName', 'Terjadi kesalahan sistem saat memproses pemesanan Anda: '.$e->getMessage());
+        }
+
+        return null;
     }
 
     public function render(): View

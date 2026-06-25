@@ -7,6 +7,8 @@ use App\Services\Maps\FakeMapProvider;
 use App\Services\Maps\GoogleMapsProvider;
 use App\Services\Maps\MapProvider;
 use App\Services\Maps\StandardDeliveryFeeCalculator;
+use App\Services\Payments\MidtransPaymentGateway;
+use App\Services\Payments\PaymentGateway;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +33,8 @@ class AppServiceProvider extends ServiceProvider
 
             return new FakeMapProvider;
         });
+
+        $this->app->singleton(PaymentGateway::class, MidtransPaymentGateway::class);
     }
 
     /**
