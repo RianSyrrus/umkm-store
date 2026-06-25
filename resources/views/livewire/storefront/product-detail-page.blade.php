@@ -146,7 +146,7 @@
                                                     class="text-accent rounded focus:ring-accent h-4.5 w-4.5 border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 cursor-pointer"
                                                 />
                                             @endif
-                                            <span class="text-sm text-stone-800 dark:text-stone-250 font-bold {{ $isSelected ? 'text-accent dark:text-accent' : '' }}">{{ $val->name }}</span>
+                                            <span class="text-sm text-stone-800 dark:text-stone-200 font-bold {{ $isSelected ? 'text-accent dark:text-accent' : '' }}">{{ $val->name }}</span>
                                         </div>
                                         @if ($priceDelta !== 0)
                                             <span class="font-mono text-xs font-black text-stone-500">
@@ -183,7 +183,7 @@
                                                 wire:model.live="selectedAddons" 
                                                 class="text-accent rounded focus:ring-accent h-4.5 w-4.5 border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 cursor-pointer"
                                             />
-                                            <span class="text-sm text-stone-800 dark:text-stone-250 font-bold {{ $isAddonSelected ? 'text-accent dark:text-accent' : '' }}">{{ $addon->name }}</span>
+                                            <span class="text-sm text-stone-800 dark:text-stone-200 font-bold {{ $isAddonSelected ? 'text-accent dark:text-accent' : '' }}">{{ $addon->name }}</span>
                                         </div>
                                         <span class="font-mono text-xs font-black text-stone-500">
                                             +Rp{{ number_format($addon->price, 0, ',', '.') }}
