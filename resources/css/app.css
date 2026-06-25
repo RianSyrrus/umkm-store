@@ -23,8 +23,8 @@
     --color-brand-950: #0c0a09;
 
     --color-accent: #d95d39;
-    --color-accent-content: #ffffff;
-    --color-accent-foreground: #d95d39;
+    --color-accent-content: #d95d39;
+    --color-accent-foreground: #ffffff;
 
     --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
 }
@@ -32,8 +32,8 @@
 @layer theme {
     .dark {
         --color-accent: #f0714d;
-        --color-accent-content: #0c0a09;
-        --color-accent-foreground: #f0714d;
+        --color-accent-content: #f0714d;
+        --color-accent-foreground: #0c0a09;
     }
 }
 
