@@ -75,6 +75,7 @@
                 <flux:field>
                     <flux:label class="font-bold text-stone-750 dark:text-stone-300">Pilih Slot Waktu</flux:label>
                     <flux:select wire:model="scheduleSlotId" placeholder="Pilih tanggal & waktu..." class="bg-white dark:bg-stone-950">
+                        <option value="">Pilih tanggal & waktu...</option>
                         @foreach ($availableSlots as $slot)
                             <option value="{{ $slot->id }}">
                                 {{ $slot->date->format('d M Y') }} ({{ $slot->timeRange }})
